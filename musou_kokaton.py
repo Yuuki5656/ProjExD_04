@@ -250,6 +250,51 @@ class Score:
         self.image = self.font.render(f"Score: {self.score}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class Shield(pg.sprite.Sprite):
+    """
+    防御壁に関するクラス
+    """
+    def __init__(self, bird: Bird, life: int):
+        """
+        引数1:こうかとんのクラス
+        引数2:生成時間
+        """
+        super(). __init__()
+        self.color = (0, 0, 0) # 防御壁の色
+        image_1 = pg.Surface(( 20, bird.rect.height*2)) # 左右
+        image_2 = pg.Surface((bird.rect.height*2, 20)) # 上下
+        self.images = [
+            image_1,
+            image_2,
+            pg.transform.rotozoom(image_1,45,1.0),
+            pg.transform.rotozoom(image_2,45,1.0)
+        ]
+        self.image = self.images[0]
+        self.rect = self.image.get_rect()
+        self.life = life
+    def update(self, bird):
+        """
+        発動時間を１減算し,0未満になったらkillする
+        """
+        if bird.dire == (0, 0) or bird.dire == (+1, 0) or bird.dire == (1, -1):
+            self.image = self.images[0]
+            self.rect.centerx = bird.rect.centerx + 150
+            self.rect.centery = bird.rect.centery 
+        if bird.dire == (0, -1) or bird.dire == (-1, -1):
+            self.image = self.images[1]
+            self.rect.centerx = bird.rect.centerx -bird.rect.height
+            self.rect.centery = bird.rect.centery - 150 + bird.rect.height
+        if bird.dire == (-1, 0) or bird.dire == (-1, 1):
+            self.image = self.images[0]
+            self.rect.centerx = bird.rect.centerx - 150
+            self.rect.centery = bird.rect.centery
+        if bird.dire == (0, 1) or bird.dire == (1, 1):
+            self.image = self.images[1]
+            self.rect.centerx = bird.rect.centerx -bird.rect.height
+            self.rect.centery = bird.rect.centery +150 +bird.rect.height
+        self.life -= 1
+        if self.life < 0:
+            self.kill()
 
 class Gravity(pg.sprite.Sprite):
     """
@@ -288,6 +333,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    shields = pg.sprite.Group()
     grvs = pg.sprite.Group()
 
     exps = pg.sprite.Group() # 爆発のグループ
@@ -304,6 +350,11 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key ==pg.K_CAPSLOCK:
+                if score.score > 50 and len(shields) == 0:
+                    shields.add(Shield(bird, 400))
+                    score.score -= 50
+                
             if event.type == pg.KEYDOWN and event.key == pg.K_TAB:
                 if score.score>=50:
                     grvs.add(Gravity(bird,200,500))
@@ -342,6 +393,10 @@ def main():
             pg.display.update()
             time.sleep(2)
             return
+        
+        for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():
+            exps.add(Explosion(bomb, 50)) # 爆発エフェクト
+            score.score_up(1) # 1点アップ
 
         beams.update()
         beams.draw(screen)
@@ -352,6 +407,8 @@ def main():
         exps.update()
         exps.draw(screen)
         score.update(screen)
+        shields.update(bird)
+        shields.draw(screen)
         grvs.update(bird)
         grvs.draw(screen)
         bird.update(key_lst, screen)
