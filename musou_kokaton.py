@@ -249,6 +249,32 @@ class Score:
         screen.blit(self.image, self.rect)
 
 
+class Gravity(pg.sprite.Sprite):
+    """
+    効果：こうかとんの周りに重力球を発生させ、その範囲内の爆弾を撃ち落とす
+    効果時間：500フレーム
+    発動条件：tabキー押下かつスコアが50より大きい
+    消費スコア：50
+    """
+    def __init__(self,bird:Bird,size:int,life:int):
+        super().__init__()
+        color=(0,0,0)
+        self.size=size
+        self.image = pg.Surface((self.size*2,self.size*2))
+        self.image.set_alpha(128)
+        self.image.fill((255,255,255))
+        pg.draw.circle(self.image, color, (self.size,self.size),self.size)
+        self.image.set_colorkey((255,255,255))
+        self.rect = self.image.get_rect()
+        self.rect.center=bird.rect.center
+        self.life = life
+    def update(self,bird:Bird):
+        self.rect.center=bird.rect.center
+        self.life-=1
+        if self.life<0:
+            self.kill()            
+
+
 def main():
     pg.display.set_caption("真！こうかとん無双")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -260,6 +286,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    grvs = pg.sprite.Group()
 
     tmr = 0
     clock = pg.time.Clock()
@@ -270,6 +297,10 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_TAB:
+                if score.score>=50:
+                    grvs.add(Gravity(bird,200,500))
+                    score.score-=50
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -289,6 +320,10 @@ def main():
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
             score.score_up(1)  # 1点アップ
 
+        for bomb in pg.sprite.groupcollide(bombs,grvs,True,False).keys():
+            exps.add(Explosion(bomb,50))
+            score.score_up(1)
+
         if len(pg.sprite.spritecollide(bird, bombs, True)) != 0:
             bird.change_img(8, screen) # こうかとん悲しみエフェクト
             score.update(screen)
@@ -296,7 +331,6 @@ def main():
             time.sleep(2)
             return
 
-        bird.update(key_lst, screen)
         beams.update()
         beams.draw(screen)
         emys.update()
@@ -306,6 +340,9 @@ def main():
         exps.update()
         exps.draw(screen)
         score.update(screen)
+        grvs.update(bird)
+        grvs.draw(screen)
+        bird.update(key_lst, screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
