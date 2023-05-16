@@ -438,7 +438,6 @@ def main():
                 time.sleep(2)
                 return
         
-        bird.update(key_lst, screen)
         for bomb in pg.sprite.groupcollide(bombs,grvs,True,False).keys():
             exps.add(Explosion(bomb,50))
             score.score_up(1)
